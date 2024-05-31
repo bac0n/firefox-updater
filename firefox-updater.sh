@@ -151,16 +151,18 @@ dlclose "${DLHANDLES[@]}"
 
 log 0 "Check Streaming SIMD Extension set .."
 
-# SIMD Extension set (TODO: eval all cores for highest simd).
-regex=$'flags\t+: ([^\n]+)(.*)$'
-if [[ $(< /proc/cpuinfo) =~ $regex ]]; then
-    for x in sse4_2 sse4_1 sse4a ssse3 sse3 sse2 sse mmx neon armv7 armv6; do
-        if [[ " ${BASH_REMATCH[1]} "  = *\ $x\ * ]]; then
-            A[Capabilities,SimdFlag]=${x^^}
-            break
-        fi
-    done
-fi
+# SIMD Extension set.
+data=$(< /proc/cpuinfo) flags=() regex=$'flags\t+: ([^\n]+)(.*)$'
+while [[ $data =~ $regex ]]; do
+    flags+=("${BASH_REMATCH[1]}") data=${BASH_REMATCH[2]}
+done
+
+for simd in sse4_2 sse4_1 sse4a ssse3 sse3 sse2 sse mmx neon armv7 armv6; do
+    if [[ " ${flags[*]} "  = *\ $simd\ * ]]; then
+        A[Capabilities,SimdFlag]=${simd^^}
+        break
+    fi
+done
 
 log 0 "Get total memory in MB .."
 
