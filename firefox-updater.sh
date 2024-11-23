@@ -7,7 +7,7 @@
 benchmark(){
      local -i a="${EPOCHREALTIME/.}-${EPOCHSTARTTIME/.}"
      local    b
-    printf -v b %07d "$a" && printf %f "${b/%??????/.&}"
+    printf -v b %07d "$a" && printf %s "${b/%??????/.&}"
 }
 
 EPOCHSTARTTIME=$EPOCHREALTIME
