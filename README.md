@@ -1,4 +1,4 @@
-### Firefox offline updater
+### Firefox standalone updater
 
 Example of `/usr/lib/firefox/update-settings.ini`:
 ```ini
