@@ -76,7 +76,7 @@ parse_update_xml(){
         m3=${BASH_REMATCH[3]} m4=${BASH_REMATCH[4]}
         case $m0 in
             "${m1:1:1}") ;&
-            "${m1:(-2):1}") route=${route%/"$m2"} ;;&
+            "${m1:(-2):1}") route=${route%/"$m2"*} ;;&
             "${m1:1:1}") continue ;;
         esac
         route=$route/$m2
