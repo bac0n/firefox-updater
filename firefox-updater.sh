@@ -1,5 +1,7 @@
 #!/bin/bash
 
+declare UPDATE_VERSION=6
+
 # shellcheck disable=SC2317
 # dependencies:
 # bash >= 5.2, versioninfo, ln, updater, wget, shasum
@@ -160,6 +162,12 @@ log 0 "Populate associative URL %component% .."
 # Populate associative %component%.
 [[ -v A[AppUpdate,URL] ]] || log 1 "AppUpdate URL missing .."
 
+
+log 0 "Parsing mozilla update infrastructure version .."
+
+[[ ${A[AppUpdate,URL]} =~ /update/([0-9]+)/ ]] && \
+    A[Updater,argVersion]=${BASH_REMATCH[1]} || log $? "Unable to parse mozilla update infrastructure Version .."
+
 u=${A[AppUpdate,URL]}
 IFS=/
 for component in $u; do
@@ -252,9 +260,12 @@ printf '%s  %s\n' \
 
 log 0 "Updater file: ${A[Updater,file]} .."
 
-command /usr/lib/firefox/updater \
+((${A[Updater,argVersion]} == UPDATE_VERSION)) || \
+    log 1 "Updater: argVersion mismatch ${A[Updater,argVersion]} != $UPDATE_VERSION .."
+
+command /usr/lib/firefox/updater "${A[Updater,argVersion]}" \
         /opt/unpack/ \
-        /usr/lib/firefox/ /usr/lib/firefox/ || log $? "Fail to update firefox .."
+        /usr/lib/firefox/ /usr/lib/firefox/ first 0 || log $? "Fail to update firefox .."
 
 # Re-parse application.ini and compare with update.xml.
 parse_application_ini A
