@@ -263,9 +263,9 @@ log 0 "Updater file: ${A[Updater,file]} .."
 ((${A[Updater,argVersion]} == UPDATE_VERSION)) || \
     log 1 "Updater: argVersion mismatch ${A[Updater,argVersion]} != $UPDATE_VERSION .."
 
-command /usr/lib/firefox/updater "${A[Updater,argVersion]}" \
+command /usr/lib/firefox/updater \
         /opt/unpack/ \
-        /usr/lib/firefox/ /usr/lib/firefox/ first 0 || log $? "Fail to update firefox .."
+        /usr/lib/firefox/ /usr/lib/firefox/ || log $? "Fail to update firefox .."
 
 # Re-parse application.ini and compare with update.xml.
 parse_application_ini A
