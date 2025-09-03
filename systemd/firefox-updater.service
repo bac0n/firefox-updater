@@ -1,0 +1,10 @@
+[Unit]
+Description=Firefox update notifier.
+After=network.target dbus.socket graphical.target
+Requires=dbus.socket
+
+[Service]
+Type=simple
+ExecStart=/opt/bin/firefox-notifier.sh
+# StandardOutput=null
+# StandardError=journal
