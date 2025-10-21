@@ -121,21 +121,21 @@ parse_application_ini A
 regex='pref\("(app.update.channel)", +"([^"]+)"\);.*$'
 [[ $(< /etc/firefox/defaults/pref/channel-prefs.js) =~ $regex ]] && A[Pref,${BASH_REMATCH[1]}]=${BASH_REMATCH[2]}
 
-log 0 "Parse kernel os properties from /proc .."
+log 0 "Parse properties from /proc filesystem .."
 
 # Kernel information.
 read -r 'A[Capabilities,osType]' _ 'A[Capabilities,osRelease]' _ < /proc/version
 
-log 0 "versioninfo: read version form shared libraries .."
+log 0 "Versioninfo: Extract shared library versions .."
 
 # Enable loadable module.
 enable -f versioninfo versioninfo || log $? "Unable to load builtin module .."
 
 versioninfo && \
     A[Capabilities,GtkVersion]=${VERSIONINFO[0]} \
-    A[Capabilities,libPulseVersion]=${VERSIONINFO[1]} || log $? "Unable to read version info .."
+    A[Capabilities,libPulseVersion]=${VERSIONINFO[1]} || log $? "Unable to read version information .."
 
-log 0 "Check Streaming SIMD Extension set .."
+log 0 "Check Streaming SIMD Extensions set .."
 
 # SIMD Extension set.
 data=$(< /proc/cpuinfo) flags=() regex=$'flags\t+: ([^\n]+)(.*)$'
@@ -150,23 +150,23 @@ for simd in sse4_2 sse4_1 sse4a ssse3 sse3 sse2 sse mmx neon armv7 armv6; do
     fi
 done
 
-log 0 "Get total memory in MB .."
+log 0 "Convert total memory to MB .."
 
 # Total memory MB.
 # shellcheck disable=SC2015
 read -r _ meminfo _ < /proc/meminfo && \
     ((A[Capabilities,MemInfo] = meminfo / 1024)) || log $? "Failed to read /proc meminfo .."
 
-log 0 "Populate associative URL %component% .."
+log 0 "Resolve %component% directives .."
 
 # Populate associative %component%.
 [[ -v A[AppUpdate,URL] ]] || log 1 "AppUpdate URL missing .."
 
 
-log 0 "Parsing mozilla update infrastructure version .."
+log 0 "Parse Mozilla update infrastructure version .."
 
 [[ ${A[AppUpdate,URL]} =~ /update/([0-9]+)/ ]] && \
-    A[Updater,argVersion]=${BASH_REMATCH[1]} || log $? "Unable to parse mozilla update infrastructure Version .."
+    A[Updater,argVersion]=${BASH_REMATCH[1]} || log $? "Unable to parse Mozilla update infrastructure Version .."
 
 u=${A[AppUpdate,URL]}
 IFS=/
@@ -193,7 +193,7 @@ for component in $u; do
         %DISTRIBUTION_VERSION%)
             u=${u//%DISTRIBUTION_VERSION%/"default"} ;;
         %+([_A-Z])%)
-            log 1 "Error: '$component´, unknown %component% .." ;;
+            log 1 "Error unknown %component%: '$component' .." ;;
     esac
 done
 IFS=$' \t\n'
@@ -202,7 +202,7 @@ A[AppUpdate,xmlURL]="$u?force=1"
 log 0 "Wget: ${A[AppUpdate,xmlURL]}"
 
 # Benchmark first stage.
-printf '\nFirst stage successful! (%ss)..\n\n' "$(benchmark)"
+printf '\nFirst stage reached successfully. (benchmark: %ss)..\n\n' "$(benchmark)"
 
 log 0 "Download update.xml file .."
 
@@ -217,7 +217,7 @@ o=( \
 )
 
 command wget "${o[@]}" \
-    -O /opt/unpack/update.xml "${A[AppUpdate,xmlURL]}" || log $? "wget: failed fetching update.xml file .."
+    -O /opt/unpack/update.xml "${A[AppUpdate,xmlURL]}" || log $? "wget: Fetching update.xml file failed .."
 
 log 0 "Parse update.xml file .."
 
@@ -234,17 +234,17 @@ work_path+=/${A[UpdateXML,appVersion]}
 work_path+=/${A[UpdateXML,buildID]}
 
 command wget "${o[@]}" \
-    -P "$work_path" "${A[UpdateXML,URL]}" || log $? "Wget: failed fetching UpdateXML URL .."
+    -P "$work_path" "${A[UpdateXML,URL]}" || log $? "Wget: Fetching UpdateXML URL failed .."
 
-[[ ${A[UpdateXML,hashFunction]} = @(sha256|sha384|sha512) ]] || log 1 "Hash function not recogized .."
+[[ ${A[UpdateXML,hashFunction]} = @(sha256|sha384|sha512) ]] || log 1 "Hash function not recognized .."
 
-log 0 "Save and check SHA checksum .."
+log 0 "shasum: Verify SHA checksum .."
 
 # Just one file, thank you.
 x=0
 for i in "$work_path"/*.mar; do
     ((x++)) \
-        && log 1 "To many *.mar files detected.."; A[Updater,file]=$i
+        && log 1 "Too many *.mar files detected.."; A[Updater,file]=$i
 done
 
 printf '%s  %s\n' \
@@ -258,7 +258,7 @@ printf '%s  %s\n' \
     command ln -rfs "${A[Updater,file]}" /opt/unpack/update.mar || \
         log $? "${A[UpdateXML,hashFunction]}: update.mar checksum mismatch .."
 
-log 0 "Updater file: ${A[Updater,file]} .."
+log 0 "Updater: file ${A[Updater,file]} .."
 
 ((${A[Updater,argVersion]} == UPDATE_VERSION)) || \
     log 1 "Updater: argVersion mismatch ${A[Updater,argVersion]} != $UPDATE_VERSION .."
@@ -276,4 +276,4 @@ parse_application_ini A
 # Write A[@] array state to check.ini.
 write_state A
 
-printf '[ ** ] \e[0;35mNew Firefox Version: %s (%ss)\e[0m\n' "${A[UpdateXML,displayVersion]}" "$(benchmark)"
+printf '[ ** ] \e[0;35mNew Firefox Version: %s (benchmark: %ss)\e[0m\n' "${A[UpdateXML,displayVersion]}" "$(benchmark)"
