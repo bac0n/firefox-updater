@@ -13,6 +13,8 @@ fi
 FIREFOX_UPDATER=/opt/bin/firefox-updater.sh
 #
 
+shopt -s extglob
+
 # Parse session properties from logged in users.
 read -ra b < <( \
     loginctl show-seat seat0 -P Sessions --no-legend \
@@ -28,7 +30,7 @@ for ((d=0, e=0; $d < ${#b[@]}; d++, e+=$c)); do
         [[ $f =~ ^([^=]+)=(.*)$ ]] && \
         A[${BASH_REMATCH[1]}]=${BASH_REMATCH[2]}
     done
-    if [[ ${A[Type]} = x11 ]] then
+    if [[ ${A[Type]} = @(x11|wayland) ]] then
         read -r ppid < <( \
             pgrep -P 1 -U "${A[Name]}" -f 'systemd[[:space:]].*--user' ) || exit 0
         read -r bpid < <( \
