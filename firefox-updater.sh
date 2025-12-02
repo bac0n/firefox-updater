@@ -20,7 +20,7 @@ declare -a o=()
 declare -A A=()
 
 if ! [[ -d /opt/unpack && -w /opt/unpack ]]; then
-    echo "Directory '/opt/unpack´ is missing or not enough permission."
+    echo "Directory '/opt/unpack´ missing or insufficient permissions."
     exit 1
 fi
 
