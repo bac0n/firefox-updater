@@ -4,12 +4,16 @@ declare UPDATE_VERSION=6
 
 # shellcheck disable=SC2317
 # dependencies:
-# bash >= 5.2, versioninfo, ln, updater, wget, shasum
+# bash >= 5.3, versioninfo, ln, updater, wget, shasum
+
+# Load builtin module,
+if ! enable -f fltexpr fltexpr; then
+    echo "Failed to enable loadable module fltexpr."
+    exit 1
+fi
 
 benchmark(){
-     local -i a="${EPOCHREALTIME/.}-${EPOCHSTARTTIME/.}"
-     local    b
-    printf -v b %07d "$a" && printf %s "${b/%??????/.&}"
+    fltexpr -p "$EPOCHREALTIME - $EPOCHSTARTTIME"
 }
 
 EPOCHSTARTTIME=$EPOCHREALTIME
@@ -202,7 +206,7 @@ A[AppUpdate,xmlURL]="$u?force=1"
 log 0 "Wget: ${A[AppUpdate,xmlURL]}"
 
 # Benchmark first stage.
-printf '\nFirst stage reached successfully. (benchmark: %ss)..\n\n' "$(benchmark)"
+printf '\nFirst stage reached successfully. (benchmark: %.6fs)..\n\n' "$(benchmark)"
 
 log 0 "Download update.xml file .."
 
@@ -276,4 +280,4 @@ parse_application_ini A
 # Write A[@] array state to check.ini.
 write_state A
 
-printf '[ ** ] \e[0;35mNew Firefox Version: %s (benchmark: %ss)\e[0m\n' "${A[UpdateXML,displayVersion]}" "$(benchmark)"
+printf '[ ** ] \e[0;35mNew Firefox Version: %s (benchmark: %.6fs)\e[0m\n' "${A[UpdateXML,displayVersion]}" "$(benchmark)"
