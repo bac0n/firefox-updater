@@ -1,10 +1,15 @@
 #!/bin/bash
 
-# depends: bash >= 5.2
+# depends: bash >= 5.3
+#
+# Load builtin module,
+if ! enable -f fltexpr fltexpr; then
+    echo "Failed to enable loadable module fltexpr."
+    exit 1
+fi
+
 benchmark(){
-     local -i a="${EPOCHREALTIME/.}-${EPOCHSTARTTIME/.}"
-     local    b
-    printf -v b %07d "$a" && printf %s "${b/%??????/.&}"
+    fltexpr -p "$EPOCHREALTIME - $EPOCHSTARTTIME"
 }
 
 EPOCHSTARTTIME=$EPOCHREALTIME
@@ -55,4 +60,4 @@ readonly VERSIONINFO && { \
     versioninfo; declare -p VERSIONINFO; \
 } || echo "can't write protect array named `VERSIONINFO`."
 
-printf '\nBenchmark (%ss).\n' $(benchmark)
+printf '\nBenchmark (%.6fs).\n' $(benchmark)
