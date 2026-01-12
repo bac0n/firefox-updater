@@ -135,6 +135,7 @@ log 0 "Versioninfo: Extract shared library versions .."
 # Enable loadable module.
 enable -f versioninfo versioninfo || log $? "Unable to load builtin module .."
 
+# shellcheck disable=SC2015
 versioninfo && \
     A[Capabilities,GtkVersion]=${VERSIONINFO[0]} \
     A[Capabilities,libPulseVersion]=${VERSIONINFO[1]} || log $? "Unable to read version information .."
@@ -169,6 +170,7 @@ log 0 "Resolve %component% directives .."
 
 log 0 "Parse Mozilla update infrastructure version .."
 
+# shellcheck disable=SC2015
 [[ ${A[AppUpdate,URL]} =~ /update/([0-9]+)/ ]] && \
     A[Updater,argVersion]=${BASH_REMATCH[1]} || log $? "Unable to parse Mozilla update infrastructure Version .."
 
@@ -200,7 +202,7 @@ for component in $u; do
             log 1 "Error unknown %component%: '$component' .." ;;
     esac
 done
-IFS=$' \t\n'
+unset IFS
 A[AppUpdate,xmlURL]="$u?force=1"
 
 log 0 "Wget: ${A[AppUpdate,xmlURL]}"
