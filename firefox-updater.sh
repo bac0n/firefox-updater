@@ -143,11 +143,12 @@ versioninfo && \
 log 0 "Check Streaming SIMD Extensions set .."
 
 # SIMD Extension set.
-data=$(< /proc/cpuinfo) flags=() regex=$'flags\t+: ([^\n]+)(.*)$'
-while [[ $data =~ $regex ]]; do
-    flags+=("${BASH_REMATCH[1]}") data=${BASH_REMATCH[2]}
+mapfile -t < /proc/cpuinfo
+for i in "${MAPFILE[@]}"; do
+    [[ $i = flags* ]] && flags+=("${i#* }")
 done
 
+# toolkit/modules/UpdateUtils.sys.mjs (Line: ~961)
 for simd in sse4_2 sse4_1 sse4a ssse3 sse3 sse2 sse mmx neon armv7 armv6; do
     if [[ " ${flags[*]} " = *\ $simd\ * ]]; then
         A[Capabilities,SimdFlag]=${simd^^}
