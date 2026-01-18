@@ -117,13 +117,24 @@ parse_application_ini() {
     done
 }
 
+# Only parse app.update.channel pref for now.
+parse_update_channel() {
+    local -n __a__=$1
+    local c i
+    mapfile -t < /etc/firefox/defaults/pref/channel-prefs.js
+    for i in "${MAPFILE[@]}"; do
+        if [[ $i = pref*app.update.channel* ]]; then
+            case "$i" in
+                *nightly*) c=nightly ;; *beta*) c=beta ;; *release*) c=release ;;
+            esac
+            __a__[Pref,app.update.channel]=$c
+        fi
+    done
+}
+
 log 0 "Import application.ini and channel-prefs.js files .."
 
-parse_application_ini A
-
-# Only parse app.update.channel pref for now.
-regex='pref\("(app.update.channel)", +"([^"]+)"\);.*$'
-[[ $(< /etc/firefox/defaults/pref/channel-prefs.js) =~ $regex ]] && A[Pref,${BASH_REMATCH[1]}]=${BASH_REMATCH[2]}
+parse_application_ini A; parse_update_channel A
 
 log 0 "Parse properties from /proc filesystem .."
 
@@ -150,7 +161,7 @@ done
 
 # toolkit/modules/UpdateUtils.sys.mjs (Line: ~961)
 for simd in sse4_2 sse4_1 sse4a ssse3 sse3 sse2 sse mmx neon armv7 armv6; do
-    if [[ " ${flags[*]#* } " = *\ $simd\ * ]]; then
+    if [[ " ${flags[*]} " = *\ $simd\ * ]]; then
         A[Capabilities,SimdFlag]=${simd^^}
         break
     fi
