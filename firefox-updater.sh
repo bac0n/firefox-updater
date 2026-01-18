@@ -118,6 +118,7 @@ parse_application_ini() {
 }
 
 # Only parse app.update.channel pref for now.
+# shellcheck disable=SC2178,SC2154
 parse_update_channel() {
     local -n __a__=$1
     local c i
