@@ -129,6 +129,7 @@ parse_update_channel() {
                 *nightly*) c=nightly ;; *beta*) c=beta ;; *release*) c=release ;;
             esac
             __a__[Pref,app.update.channel]=$c
+            break
         fi
     done
 }
