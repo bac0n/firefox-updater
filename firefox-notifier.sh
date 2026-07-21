@@ -36,7 +36,7 @@ for ((d=0, e=0; d < ${#b[@]}; d++, e+=c)); do
         read -r bpid < <( \
             pgrep -P "$ppid" -U "${A[Name]}" -f '(dbus-daemon[[:space:]].*--session|dbus-broker-launch[[:space:]].*--scope[[:space:]]user)' ) || exit 0
 
-        # shellcheck disable=SC1090
+        # shellcheck source=/dev/null
         source <(strings "/proc/$bpid/environ")
 
         [[ -n $DBUS_SESSION_BUS_ADDRESS ]] || exit 1

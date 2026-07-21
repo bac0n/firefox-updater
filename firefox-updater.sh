@@ -2,7 +2,6 @@
 
 declare UPDATE_VERSION=6
 
-# shellcheck disable=SC2317
 # dependencies:
 # bash >= 5.3, versioninfo, ln, updater, wget, shasum
 
@@ -36,6 +35,7 @@ printf '%s\n' "$(< /opt/unpack/check.ini)" > /opt/unpack/check.ini~
 printf '# Created: %(%F %T)T\n%s\n' -1 "#" > /opt/unpack/check.ini
 
 # Write array state to log file.
+# shellcheck disable=SC2178
 write_state(){
     local -n __a__=$1
     eval "printf '[%s] = %s\n' ${__a__[*]@K}" >> /opt/unpack/check.ini
@@ -65,7 +65,7 @@ percent_encoding(){
 }
 
 # Parse and Decode xml
-# shellcheck disable=SC2154,SC2004
+# shellcheck disable=SC2178
 parse_update_xml(){
     local -n __a__=$1
     local -A B entities=( \
@@ -96,13 +96,13 @@ parse_update_xml(){
             [[ $route =~ (/update|/patch) ]] && B[$n1]=$n2
         done
         if [[ ${B[type]} = @(minor|complete) ]]; then
-            for x in "${!B[@]}"; do __a__[UpdateXML,$x]=${B[$x]}; done
+            for x in "${!B[@]}"; do __a__["UpdateXML,$x"]=${B[$x]}; done
         fi
     done
 }
 
 # format: A[section,key]=value.
-# shellcheck disable=SC2178,SC2004
+# shellcheck disable=SC2178
 parse_application_ini() {
     local -n __a__=$1
     local s i
@@ -111,14 +111,14 @@ parse_application_ini() {
         case "$i" in
             \[*\]) s=${i:1:(-1)}
                    ;;
-         [^\[\;]*) __a__[$s,${i%%=*}]=${i#*=}
+         [^\[\;]*) __a__["$s,${i%%=*}"]=${i#*=}
                    ;;
         esac
     done
 }
 
 # Only parse app.update.channel pref for now.
-# shellcheck disable=SC2178,SC2154
+# shellcheck disable=SC2178
 parse_update_channel() {
     local -n __a__=$1
     local c i
@@ -128,7 +128,7 @@ parse_update_channel() {
             case "$i" in
                 *nightly*) c=nightly ;; *beta*) c=beta ;; *release*) c=release ;;
             esac
-            __a__[Pref,app.update.channel]=$c
+            __a__["Pref,app.update.channel"]=$c
             break
         fi
     done
@@ -136,7 +136,8 @@ parse_update_channel() {
 
 log 0 "Import application.ini and channel-prefs.js files .."
 
-parse_application_ini A; parse_update_channel A
+parse_application_ini A
+parse_update_channel A
 
 log 0 "Parse properties from /proc filesystem .."
 
@@ -145,13 +146,12 @@ read -r 'A[Capabilities,osType]' _ 'A[Capabilities,osRelease]' _ < /proc/version
 
 log 0 "Versioninfo: Extract shared library versions .."
 
-# Enable loadable module.
-enable -f versioninfo versioninfo || log $? "Unable to load builtin module .."
-
-# shellcheck disable=SC2015
-versioninfo && \
-    A[Capabilities,GtkVersion]=${VERSIONINFO[0]} \
-    A[Capabilities,libPulseVersion]=${VERSIONINFO[1]} || log $? "Unable to read version information .."
+if enable -f versioninfo versioninfo && versioninfo; then
+    A["Capabilities,GtkVersion"]=${VERSIONINFO[0]}
+    A["Capabilities,libPulseVersion"]=${VERSIONINFO[1]}
+else
+    log 1 "Unable to read version information .."
+fi
 
 log 0 "Check Streaming SIMD Extensions set .."
 
@@ -164,7 +164,7 @@ done
 # toolkit/modules/UpdateUtils.sys.mjs (Line: ~961)
 for simd in sse4_2 sse4_1 sse4a ssse3 sse3 sse2 sse mmx neon armv7 armv6; do
     if [[ " ${flags[*]} " = *\ $simd\ * ]]; then
-        A[Capabilities,SimdFlag]=${simd^^}
+        A["Capabilities,SimdFlag"]=${simd^^}
         break
     fi
 done
@@ -172,23 +172,27 @@ done
 log 0 "Convert total memory to MB .."
 
 # Total memory MB.
-# shellcheck disable=SC2015
-read -r _ meminfo _ < /proc/meminfo && \
-    ((A[Capabilities,MemInfo] = meminfo / 1024)) || log $? "Failed to read /proc meminfo .."
+if read -r _ meminfo _ < /proc/meminfo; then
+    ((A["Capabilities,MemInfo"] = meminfo / 1024))
+else
+    log 1 "Failed to read /proc meminfo .."
+fi
 
 log 0 "Resolve %component% directives .."
 
 # Populate associative %component%.
-[[ -v A[AppUpdate,URL] ]] || log 1 "AppUpdate URL missing .."
+[[ -v A["AppUpdate,URL"] ]] || log 1 "AppUpdate URL missing .."
 
 
 log 0 "Parse Mozilla update infrastructure version .."
 
-# shellcheck disable=SC2015
-[[ ${A[AppUpdate,URL]} =~ /update/([0-9]+)/ ]] && \
-    A[Updater,argVersion]=${BASH_REMATCH[1]} || log $? "Unable to parse Mozilla update infrastructure Version .."
+if [[ ${A["AppUpdate,URL"]} =~ /update/([0-9]+)/ ]]; then
+    A["Updater,argVersion"]=${BASH_REMATCH[1]}
+else
+    log 1 "Unable to parse Mozilla update infrastructure Version .."
+fi
 
-u=${A[AppUpdate,URL]}
+u=${A["AppUpdate,URL"]}
 IFS=/
 for component in $u; do
     case $component in
@@ -217,7 +221,7 @@ for component in $u; do
     esac
 done
 unset IFS
-A[AppUpdate,xmlURL]="$u?force=1"
+A["AppUpdate,xmlURL"]="$u?force=1"
 
 log 0 "Wget: ${A[AppUpdate,xmlURL]}"
 
@@ -243,20 +247,20 @@ log 0 "Parse update.xml file .."
 
 parse_update_xml A
 
-[[ -v A[UpdateXML,URL] ]] || log 1 "UpdateXML URL missing .."
+[[ -v A["UpdateXML,URL"] ]] || log 1 "UpdateXML URL missing .."
 
 log 0 "Wget: ${A[UpdateXML,URL]}"
 log 0 "Download *.${A[UpdateXML,type]}.mar file (${A[UpdateXML,displayVersion]}) .."
 
 work_path=/opt/unpack
-work_path+=/${A[UpdateXML,type]}
-work_path+=/${A[UpdateXML,appVersion]}
-work_path+=/${A[UpdateXML,buildID]}
+work_path+=/${A["UpdateXML,type"]}
+work_path+=/${A["UpdateXML,appVersion"]}
+work_path+=/${A["UpdateXML,buildID"]}
 
 command wget "${o[@]}" \
     -P "$work_path" "${A[UpdateXML,URL]}" || log $? "Wget: Fetching UpdateXML URL failed .."
 
-[[ ${A[UpdateXML,hashFunction]} = @(sha256|sha384|sha512) ]] || log 1 "Hash function not recognized .."
+[[ ${A["UpdateXML,hashFunction"]} = @(sha256|sha384|sha512) ]] || log 1 "Hash function not recognized .."
 
 log 0 "shasum: Verify SHA checksum .."
 
@@ -264,23 +268,23 @@ log 0 "shasum: Verify SHA checksum .."
 x=0
 for i in "$work_path"/*.mar; do
     ((x++)) \
-        && log 1 "Too many *.mar files detected.."; A[Updater,file]=$i
+        && log 1 "Too many *.mar files detected.."
+    A["Updater,file"]=$i
 done
 
 printf '%s  %s\n' \
     "${A[UpdateXML,hashValue]}" "${A[Updater,file]##*/}" > "${A[Updater,file]}.${A[UpdateXML,hashFunction]}"
 
-# shellcheck disable=SC2015
 ( \
     builtin cd "$work_path"; \
     command shasum -a "${A[UpdateXML,hashFunction]/#sha}" -s -c "${A[Updater,file]}.${A[UpdateXML,hashFunction]}" \
-) && \
+) && { \
     command ln -rfs "${A[Updater,file]}" /opt/unpack/update.mar || \
-        log $? "${A[UpdateXML,hashFunction]}: update.mar checksum mismatch .."
+        log $? "${A[UpdateXML,hashFunction]}: update.mar checksum mismatch .."; }
 
 log 0 "Updater: file ${A[Updater,file]} .."
 
-((${A[Updater,argVersion]} == UPDATE_VERSION)) || \
+((A["Updater,argVersion"] == UPDATE_VERSION)) || \
     log 1 "Updater: argVersion mismatch ${A[Updater,argVersion]} != $UPDATE_VERSION .."
 
 command /usr/lib/firefox/updater "${A[Updater,argVersion]}" \
@@ -290,7 +294,7 @@ command /usr/lib/firefox/updater "${A[Updater,argVersion]}" \
 # Re-parse application.ini and compare with update.xml.
 parse_application_ini A
 
-[[ ${A[App,BuildID]} = "${A[UpdateXML,buildID]}" ]] || \
+[[ ${A["App,BuildID"]} = "${A[UpdateXML,buildID]}" ]] || \
     log 1 "BuildID mismatch (${A[App,BuildID]} != ${A[UpdateXML,buildID]}) .."
 
 # Write A[@] array state to check.ini.
